@@ -1,0 +1,48 @@
+{
+  "project_info": {
+    "project_number": "622698687958",
+    "project_id": "messagingapp-77a42",
+    "storage_bucket": "messagingapp-77a42.appspot.com"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:622698687958:android:b7b5a034af711839040877",
+        "android_client_info": {
+          "package_name": "com.application.connectopia"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyDCqYRvc51PnFM-oWS4wKPzPfUxlY9WpCw"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    },
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:622698687958:android:3db942bc2b865948040877",
+        "android_client_info": {
+          "package_name": "com.example.messagingapp"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyDCqYRvc51PnFM-oWS4wKPzPfUxlY9WpCw"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
