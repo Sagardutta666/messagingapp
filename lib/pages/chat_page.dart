@@ -1,8 +1,11 @@
+import 'dart:async';
+
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
 import 'package:messagingapp/components/textfield.dart';
 import 'package:messagingapp/services/auth/auth_service.dart';
 import 'package:messagingapp/services/auth/chat/chat_services.dart';
+import 'package:overlay_support/overlay_support.dart';
 
 import '../components/chat_bubble.dart';
 
@@ -16,48 +19,83 @@ class ChatPage extends StatefulWidget {
 }
 
 class _ChatPageState extends State<ChatPage> {
-  //text controller
   final TextEditingController _messageController = TextEditingController();
-
-  //chat & auth services
   final ChatServices _chatService = ChatServices();
-
   final AuthService _authService = AuthService();
-
+  final ScrollController _scrollController = ScrollController();
   FocusNode myFocusNode = FocusNode();
+  StreamSubscription? _subscription;
 
   @override
   void initState() {
     super.initState();
-    //add listener to this focus node
     myFocusNode.addListener(() {
       if (myFocusNode.hasFocus) {
-        //cause a delay so that the keyboard has time to show up
-        //then the amount of remaining space will be celebrated,
-        //then scroll down
         Future.delayed(
           const Duration(milliseconds: 500),
-          () => scrollDown(),
+              () => scrollDown(),
         );
       }
     });
-
-    //wait a bit for listview to be buil, then scroll to bottom
     Future.delayed(
       const Duration(milliseconds: 500),
-      () => scrollDown(),
+          () => scrollDown(),
     );
+
+    _listenForMessages();
   }
 
   @override
   void dispose() {
     myFocusNode.dispose();
     _messageController.dispose();
+    _subscription?.cancel();
     super.dispose();
   }
 
-  //scroll controller
-  final ScrollController _scrollController = ScrollController();
+  void _listenForMessages() {
+    String currentUserId = _authService.getCurrentUser()!.uid;
+    _subscription = _chatService
+        .getMessages(currentUserId, widget.receiverID)
+        .listen((snapshot) {
+      for (var doc in snapshot.docChanges) {
+        if (doc.type == DocumentChangeType.added) {
+          final data = doc.doc.data() as Map<String, dynamic>;
+          if (data['senderID'] != currentUserId) {
+            showOverlayNotification((context) {
+              return _buildNotificationContent(data['message']);
+            }, duration: const Duration(seconds: 3));
+          }
+        }
+      }
+    });
+  }
+
+  Widget _buildNotificationContent(String message) {
+    return Card(
+      margin: const EdgeInsets.symmetric(horizontal: 8),
+      color: Colors.green[400],
+      child: SafeArea(
+        child: ListTile(
+          leading: const Icon(Icons.message, color: Colors.white),
+          title: const Text(
+            'New Message',
+            style: TextStyle(color: Colors.white),
+          ),
+          subtitle: Text(
+            message,
+            style: const TextStyle(color: Colors.white),
+          ),
+          trailing: IconButton(
+            icon: const Icon(Icons.close, color: Colors.white),
+            onPressed: () {
+              OverlaySupportEntry.of(context)?.dismiss();
+            },
+          ),
+        ),
+      ),
+    );
+  }
 
   void scrollDown() {
     _scrollController.animateTo(
@@ -67,18 +105,12 @@ class _ChatPageState extends State<ChatPage> {
     );
   }
 
-  //send message
   void sendMessage() async {
-    //if there is somethings inside the textfield
     if (_messageController.text.isNotEmpty) {
-      //send the message
       await _chatService.sendMessage(
           widget.receiverID, _messageController.text);
-
-      //clear text controller
       _messageController.clear();
     }
-
     scrollDown();
   }
 
@@ -98,50 +130,42 @@ class _ChatPageState extends State<ChatPage> {
       ),
       body: Column(
         children: [
-          //display all the messages
           Expanded(
             child: _buildMessageList(),
           ),
-          //user input
           _buildUserInput(),
         ],
       ),
     );
   }
 
-  //build message list
   Widget _buildMessageList() {
     String senderID = _authService.getCurrentUser()!.uid;
 
     return StreamBuilder(
       stream: _chatService.getMessages(widget.receiverID, senderID),
       builder: (context, snapshot) {
-        //errors
         if (snapshot.hasError) {
           return const Text("Error");
         }
 
-        //loading
         if (snapshot.connectionState == ConnectionState.waiting) {
-          return const Text("Loading ...");
+          return const CircularProgressIndicator();
         }
 
-        //return list view
         return ListView(
           controller: _scrollController,
           children:
-              snapshot.data!.docs.map((doc) => _buildMessageItem(doc)).toList(),
+          snapshot.data!.docs.map((doc) => _buildMessageItem(doc)).toList(),
         );
       },
     );
   }
 
-  //build message item
   Widget _buildMessageItem(DocumentSnapshot doc) {
     Map<String, dynamic> data = doc.data() as Map<String, dynamic>;
     bool isCurrentUser = data['senderID'] == _authService.getCurrentUser()!.uid;
 
-    // Wrap ChatBubble in an Align widget or use a Container with alignment
     return Align(
       alignment: isCurrentUser ? Alignment.centerRight : Alignment.centerLeft,
       child: ChatBubble(
@@ -151,13 +175,11 @@ class _ChatPageState extends State<ChatPage> {
     );
   }
 
-  //build message input
   Widget _buildUserInput() {
     return Padding(
       padding: const EdgeInsets.only(bottom: 30.0),
       child: Row(
         children: [
-          // textfield should take most of the space
           Expanded(
             child: MyTextField(
               focusNode: myFocusNode,
@@ -166,8 +188,6 @@ class _ChatPageState extends State<ChatPage> {
               controller: _messageController,
             ),
           ),
-
-          //send button
           Container(
             decoration: const BoxDecoration(
               color: Colors.green,

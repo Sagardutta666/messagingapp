@@ -15,7 +15,7 @@ class SettingsPage extends StatelessWidget {
         title: const Padding(
           padding: EdgeInsets.only(right: 60),
           child: Center(
-            child: Text('SETTINGS'),
+            child: Text('Settings'),
           ),
         ),
         backgroundColor: Colors.transparent,
